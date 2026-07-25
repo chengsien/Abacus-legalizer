@@ -1,0 +1,7 @@
+benchmarks/
+checker/
+HW4_M16144122/legal/
+HW4_M16144122/HW4_M16144122
+*.o
+*.out
+*.exe
