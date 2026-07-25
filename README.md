@@ -37,11 +37,13 @@ benchmarks:
 
 **1. Row splitting for fixed obstacles**
 Each placement row is partitioned into usable sub-row segments around fixed
-macros, so movable cells are never placed into blocked regions. Non-rectangular
-fixed nodes are blocked using their component shapes from the `.shapes` file
-rather than their enclosing rectangle, which recovers placeable area that a
-bounding-box approximation would discard. `terminal_NI` nodes are excluded from
-blocking, since standard cells are allowed to be placed beneath them.
+nodes, so movable cells are never placed into blocked regions. Blocked
+intervals are collected per row, merged, and the remaining gaps become
+site-aligned sub-rows.
+
+Non-rectangular fixed nodes are blocked using their individual component shapes
+from the `.shapes` file rather than their enclosing rectangle, which recovers
+placeable area that a bounding-box approximation would discard.
 
 **2. Row-based quadratic placement**
 Cells are sorted by x-coordinate and processed left to right. Within each row,
@@ -53,8 +55,19 @@ Abutting cells are merged into clusters and collapsed recursively when overlaps
 occur, which preserves the relative cell ordering produced by global placement.
 
 **4. Lowest-cost row search**
-For every cell, candidate rows are searched dynamically and the row with the
-lowest displacement cost is selected.
+For every cell, candidate sub-rows within a window around its original row are
+trial-placed, and the one with the lowest total displacement cost — counting
+both the cell itself and the cells it displaces — is selected. The search
+window is narrowed on larger designs to bound runtime.
+
+## Limitations
+
+`terminal_NI` nodes are currently treated as blocking obstacles, the same as
+regular `terminal` nodes. The benchmark specification allows standard cells to
+be placed beneath `terminal_NI` nodes without an overlap violation, so
+excluding them from the blocked-interval set would recover additional placeable
+area and reduce row fragmentation. Results remain legal either way; this is a
+conservative choice, not a correctness issue.
 
 ## Input Format
 
