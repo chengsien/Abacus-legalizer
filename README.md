@@ -1,34 +1,47 @@
 # Abacus Standard-Cell Legalizer
 
-A C++ implementation of the **Abacus** legalization algorithm for VLSI placement.
-Given a global placement result, the tool removes cell overlaps and snaps every
-standard cell onto a legal, site-aligned position while minimizing total cell
-displacement and preserving the relative ordering from global placement.
+A C++ implementation of the **Abacus** legalization algorithm [1] for VLSI
+placement. Given a global placement result, the tool removes cell overlaps and
+snaps every standard cell onto a legal, site-aligned position while minimizing
+total cell displacement and preserving the relative ordering from global
+placement.
 
-Course project for *Nano IC Physical Design*, National Cheng Kung University.
+Course project for *Physical Design for Nanometer IC*, National Cheng Kung
+University.
 
 ## Results
 
-Evaluated on the ICCAD 2013 contest benchmark suite:
+Evaluated on three ICCAD 2013 contest benchmarks:
 
-| Benchmark   | Cells   | Nets    | Legality | HPWL Degradation | Runtime |
-|-------------|---------|---------|----------|------------------|---------|
-| superblue1  | 847,441 | 822,744 | Pass     | 5%               | 80.9 s  |
-| superblue5  | 772,457 | 786,999 | Pass     | 7%               | 108.7 s |
-| superblue19 | 522,775 | 511,685 | Pass     | 8%               | 251.1 s |
+| Benchmark   | Cells   | Nets    | Legality | Baseline HPWL | HPWL Degradation | Runtime |
+|-------------|---------|---------|----------|---------------|------------------|---------|
+| superblue1  | 847,441 | 822,744 | Pass     | 251,275,483   | 5%               | 80.9 s  |
+| superblue5  | 772,457 | 786,999 | Pass     | 321,001,759   | 7%               | 108.7 s |
+| superblue19 | 522,775 | 511,685 | Pass     | 135,375,236   | 8%               | 251.1 s |
 
-All three results pass the official `iccad2013_check_legality` checker with
-zero overlaps and full site-grid alignment. Runtimes measured on a single
-CPU core, covering parsing, legalization, and output writing.
+Baseline HPWL is measured on the global placement input. Runtimes are measured
+on a single CPU core and cover parsing, legalization, and output writing.
+
+Both hard constraints of the assignment are satisfied on every benchmark:
+
+| Constraint | Requirement | Worst observed |
+|------------|-------------|----------------|
+| HPWL degradation | ≤ 20% | 8% |
+| Runtime | ≤ 5 minutes | 4 min 11 s |
 
 ## Algorithm
 
-The implementation follows the Abacus formulation, with two additions for
-handling real benchmark constraints:
+The implementation follows the Abacus formulation, with additional handling for
+the fixed-obstacle and non-rectangular macro features present in these
+benchmarks:
 
 **1. Row splitting for fixed obstacles**
 Each placement row is partitioned into usable sub-row segments around fixed
-macros, so cells are never placed into blocked regions.
+macros, so movable cells are never placed into blocked regions. Non-rectangular
+fixed nodes are blocked using their component shapes from the `.shapes` file
+rather than their enclosing rectangle, which recovers placeable area that a
+bounding-box approximation would discard. `terminal_NI` nodes are excluded from
+blocking, since standard cells are allowed to be placed beneath them.
 
 **2. Row-based quadratic placement**
 Cells are sorted by x-coordinate and processed left to right. Within each row,
@@ -49,15 +62,20 @@ Follows the **Bookshelf** format:
 
 | File | Description |
 |------|-------------|
-| `.aux` | Index file pointing to the files below |
-| `.nodes` | Cell dimensions and types |
-| `.nets` | Netlist connectivity |
-| `.gp.pl` | Global placement result (input positions) |
-| `.scl` | Row structure definition |
+| `.aux` | Index file listing the files below |
+| `.nodes` | Node dimensions and move types (`movable` / `terminal` / `terminal_NI`) |
+| `.nets` | Netlist connectivity and pin offsets |
+| `.gp.pl` | Global placement result — the input positions to legalize |
+| `.scl` | Circuit row structure (coordinate, height, site spacing, subrow origin) |
+| `.shapes` | Component shapes of non-rectangular fixed nodes |
+
+Note that the legalizer reads `.gp.pl`, not `.pl`. The `.pl` file contains
+undefined coordinates for movable nodes.
 
 ## Output
 
-`legal/<benchmark>.legal.pl` — the legalized placement in Bookshelf `.pl` format.
+`legal/<benchmark>.legal.pl` — the legalized placement, in the same Bookshelf
+`.pl` format as the input.
 
 ## Build
 
@@ -81,7 +99,8 @@ Execution time is reported on completion.
 
 ## Validation
 
-Legality and wirelength are verified with the official ICCAD 2013 contest tools:
+Legality and wirelength are verified with the official ICCAD 2013 contest
+scripts:
 
 ```bash
 ./iccad2013_check_legality superblue1.aux superblue1.legal.pl
@@ -90,6 +109,11 @@ Legality and wirelength are verified with the official ICCAD 2013 contest tools:
 ```bash
 ./iccad2013_get_hpwl superblue1.aux superblue1.legal.pl
 ```
+
+The legality checker verifies five conditions: that no fixed node has moved,
+that every movable node lies inside the placement area, that movable nodes are
+row-aligned, that they sit on a multiple of the site spacing, and that no
+overlaps exist among nodes.
 
 ## Benchmarks
 
@@ -120,3 +144,12 @@ Abacus-legalizer/
         ├── datatype.cpp / .h     Data structures for modules, rows, nets
         └── algo.cpp / algo.h     Abacus legalization core
 ```
+
+## Reference
+
+[1] P. Spindler, U. Schlichtmann, and F. M. Johannes, "Abacus: Fast
+Legalization of Standard Cell Circuits with Minimal Movement," *ISPD*,
+pp. 47–53, 2008.
+
+[2] ICCAD 2013 CAD Contest, Problem B — Placement Finishing.
+http://cad-contest.cs.nctu.edu.tw/CAD-contest-at-ICCAD2013/problem_b/
