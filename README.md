@@ -164,5 +164,5 @@ Abacus-legalizer/
 Legalization of Standard Cell Circuits with Minimal Movement," *ISPD*,
 pp. 47–53, 2008.
 
-[2] ICCAD 2013 CAD Contest, Problem B — Placement Finishing.
-http://cad-contest.cs.nctu.edu.tw/CAD-contest-at-ICCAD2013/problem_b/
+[2] M.-C. Kim, N. Viswanathan, Z. Li, and C. J. Alpert, "ICCAD-2013 CAD Contest in Placement Finishing and Benchmark Suite," ICCAD, pp. 268–270, 2013.
+https://ieeexplore.ieee.org/document/6691130
